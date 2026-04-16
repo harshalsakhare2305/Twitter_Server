@@ -23,6 +23,8 @@ export async function createApp() {
       ${Tweet.types}
         type Query{
            ${User.queries}
+           ${Tweet.query}
+           
         }
 
         type Mutation{
@@ -32,12 +34,16 @@ export async function createApp() {
     const resolvers = {
 
         Query: {
-            ...User.resolvers.queries
+            ...User.resolvers.queries,
+            ...Tweet.resolvers.queries,
         },
 
         Mutation:{
            ...Tweet.resolvers.mutations 
-        }
+        },
+
+        ...Tweet.resolvers.extraaResolvers,
+        ...User.resolvers.extraaResolver,
     };
 
     const server = new ApolloServer<GraphqlContext>({
