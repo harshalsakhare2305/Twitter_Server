@@ -7,6 +7,7 @@ import { prisma } from '../clients/db/index.js';
 import { User } from '../user/index.js';
 import type { GraphqlContext, JWTUser } from '../interfaces.js';
 import JWTService from '../service/jwt.js';
+import { Tweet } from './Tweet/index.js';
 
 export async function createApp() {
 
@@ -19,14 +20,23 @@ export async function createApp() {
 
     const typeDefs = `
       ${User.types}
+      ${Tweet.types}
         type Query{
            ${User.queries}
+        }
+
+        type Mutation{
+         ${Tweet.mutations}
         }
     `;
     const resolvers = {
 
         Query: {
             ...User.resolvers.queries
+        },
+
+        Mutation:{
+           ...Tweet.resolvers.mutations 
         }
     };
 
@@ -45,7 +55,7 @@ export async function createApp() {
                 ? authHeader.split(" ")[1]
                 : undefined;
 
-            console.log("🎫 Token received on server:", token);
+        
 
             const user = token ? JWTService.verifyToken(token) : null;
 
