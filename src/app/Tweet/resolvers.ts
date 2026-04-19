@@ -1,44 +1,77 @@
 import { connect } from "node:http2";
 import { prisma } from "../../clients/db/index.js";
 import type { GraphqlContext } from "../../interfaces.js";
+import { PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-import type { Tweet,PrismaClient, User } from "@prisma/client";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export interface CreateTweetPayload{
-   
- content:string
- imageURL?:string
- 
-} 
+import type { Tweet, PrismaClient, User } from "@prisma/client";
 
-const mutations={
-    createTweet: async (parent:any,{payload}:{payload:CreateTweetPayload},ctx:GraphqlContext)=>{
-      
-        if(!ctx.user)throw new Error("You are not Authenticated");
+export interface CreateTweetPayload {
 
-      const t=await prisma.tweet.create({
-            data:{
-                content:payload.content,
-                imageURL:payload.imageURL ?? null,
-                author:{connect:{id:ctx.user.id}},
+    content: string
+    imageURL?: string
+
+}
+
+const mutations = {
+    createTweet: async (parent: any, { payload }: { payload: CreateTweetPayload }, ctx: GraphqlContext) => {
+
+        if (!ctx.user) throw new Error("You are not Authenticated");
+
+        const t = await prisma.tweet.create({
+            data: {
+                content: payload.content,
+                imageURL: payload.imageURL ?? null,
+                author: { connect: { id: ctx.user.id } },
             },
         });
-       
-       return t; 
+
+        return t;
 
     }
 }
 
-const queries ={
-    getAllTweets:()=> prisma.tweet.findMany({orderBy:{createdAt:"desc"}})
-    
+const queries = {
+    getAllTweets: () => prisma.tweet.findMany({ orderBy: { createdAt: "desc" } }),
+    getSignedURLForTweet: async (parent: any, { imageType,Imagename }: { imageType: string,Imagename:String }, ctx: GraphqlContext) => {
+
+        if (!ctx.user || !ctx.user.id) throw new Error('Unauthenticated User');
+
+        const allowedImageTypes = ["image/jpg", "image/jpeg", "image/png", "image/webp"];
+
+        if (!allowedImageTypes.includes(imageType)) {
+            throw new Error('Unsupported ImageType');
+        }
+
+        const s3Client = new S3Client({
+            region: 'ap-south-1',
+            credentials: {
+                accessKeyId: process.env.AWS_S3_KEY!,
+                secretAccessKey: process.env.AWS_S3_SECRET!
+            }
+        });
+
+        const putObjectCommand =new PutObjectCommand({
+            Bucket:'twitter.dev.storage',
+            Key:`uploads/${ctx.user.id}/tweets/${Imagename}-${Date.now().toString()}`,
+        });
+
+
+    const signedURl =await getSignedUrl(s3Client,putObjectCommand);
+
+    return signedURl;
+
+
+    }
+
 }
 
-const extraaResolvers ={
-    Tweet:{
-        author:(parent:Tweet)=> prisma.user.findUnique({where:{id:parent.authorId}})
+const extraaResolvers = {
+    Tweet: {
+        author: (parent: Tweet) => prisma.user.findUnique({ where: { id: parent.authorId } })
     }
 }
 
-export const resolvers ={mutations,extraaResolvers,queries};
+export const resolvers = { mutations, extraaResolvers, queries };
 

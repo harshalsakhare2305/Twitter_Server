@@ -76,6 +76,14 @@ const queries: any={
 
 
        return user;
+    },
+
+    getUserById: async (parent:any,{id}:{id:string},ctx:GraphqlContext)=>{
+       return prisma.user.findUnique({
+         where:{
+          id
+         }
+       });
     }
 }
 
