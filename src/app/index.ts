@@ -29,6 +29,7 @@ export async function createApp() {
 
         type Mutation{
          ${Tweet.mutations}
+         ${User.mutations}
         }
     `;
     const resolvers = {
@@ -39,7 +40,8 @@ export async function createApp() {
         },
 
         Mutation:{
-           ...Tweet.resolvers.mutations 
+           ...Tweet.resolvers.mutations ,
+           ...User.resolvers.mutations,
         },
 
         ...Tweet.resolvers.extraaResolvers,

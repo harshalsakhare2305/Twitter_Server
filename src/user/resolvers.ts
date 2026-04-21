@@ -6,6 +6,25 @@ import type { User } from "@prisma/client";
 import UserService from "../service/UserService.js";
 
 
+const mutations={
+    followUser: async(parent:any,{to}:{to:string},ctx:GraphqlContext)=>{
+         if(!ctx.user || !ctx.user.id) throw new Error("Unauthorized User")
+
+        await UserService.followUser(ctx.user.id,to);
+
+        return true;
+    },
+
+     UnfollowUser: async(parent:any,{to}:{to:string},ctx:GraphqlContext)=>{
+         if(!ctx.user || !ctx.user.id) throw new Error("Unauthorized User")
+
+        await UserService.UnfollowUser(ctx.user.id,to);
+
+
+        return true;
+    }
+}
+
 
 const queries: any={
     verifyGoogleToken:async(parent:any,{token}:{token:string})=>{
@@ -39,9 +58,33 @@ const extraaResolver={
      tweets:(parent:User)=>
     prisma.tweet.findMany({
     where:{authorId:parent.id}
-    })
+    }),
+
+    followers:async(parent:User)=>{
+        const result =await prisma.follows.findMany({where:{following:{id:parent.id}},
+    include:{
+        follower:true,
+        following:true
+    }
+    }
+        
+    )
+
+    return result.map(el=>el.follower);
+    },
+    
+    following:async(parent:User)=>{
+        const result =await prisma.follows.findMany({where:{follower:{id:parent.id}},
+        include:{
+            follower:true,
+            following:true,
+        }});
+
+        return result.map(el=>el.following);
+    },
+
 }
 }
 
 
-export const resolvers={queries,extraaResolver}
+export const resolvers={queries,extraaResolver,mutations}
