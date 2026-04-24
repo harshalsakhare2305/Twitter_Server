@@ -116,7 +116,7 @@ const extraaResolver={
 
        for(const followings of myfollowings){
         for(const followingofFollowing of followings.following.followers){
-            if(followingofFollowing.following.id!==ctx.user.id && myfollowings.findIndex((e)=>e?.followerId===followingofFollowing.following.id)<0){
+            if(followingofFollowing.following.id!==ctx.user.id && myfollowings.findIndex((e)=>e?.followingId===followingofFollowing.following.id)<0){
                user.push(followingofFollowing.following);
             }
         }
