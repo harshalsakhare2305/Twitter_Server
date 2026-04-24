@@ -13,6 +13,14 @@ export interface CreateTweetPayload {
 
 class TweetService{
     public static async createTweet(payload:CreateTweetPayload){
+
+        const rate_limit_key = `rate-limit:createtweet:user:${payload.userId}`;
+
+        const ratelimitflag =await redisClient.get(rate_limit_key);
+        if(rate_limit_key){
+            throw new Error("Please wait");
+        }
+
          
         const tweet =await prisma.tweet.create({
             data: {
@@ -22,7 +30,10 @@ class TweetService{
             },
         });
 
+
+       await redisClient.set(rate_limit_key,1,"EX",10);
         redisClient.del('tweets:all');
+        return tweet;
     }
 
 
