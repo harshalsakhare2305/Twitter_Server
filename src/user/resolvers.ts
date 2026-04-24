@@ -39,6 +39,7 @@ const queries: any={
     
     getCurrentUser : async (parent:any,args:any,ctx:GraphqlContext)=>{
        const id=ctx.user?.id;
+       
        if(!id){
         console.log("Id not found for current user");
         return null;

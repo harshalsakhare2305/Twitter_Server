@@ -2,6 +2,7 @@ import axios from "axios";
 import { prisma } from "../clients/db/index.js";
 import JWTService from "./jwt.js";
 import { connect } from "node:http2";
+import { redisClient } from "../clients/db/redis/index.js";
 
 
 interface GoogleTokenResult{
@@ -61,12 +62,23 @@ class UserService{
         return jwttoken;
     }
 
-    public static getUserById(id:string){
-        return  prisma.user.findUnique({
+    public static async getUserById(id:string){
+        const cacheKey =`user:profile:${id}`
+
+        const cacheValue =await redisClient.get(cacheKey);
+        if(cacheValue){
+            return JSON.parse(cacheValue);
+        }
+
+         const user =await prisma.user.findUnique({
          where:{
             id:id
          }
        });
+
+       await redisClient.set(cacheKey,JSON.stringify(user));
+
+       return user;
     }
 
     public static followUser(from:string,to:string){
