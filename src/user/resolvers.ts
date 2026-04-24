@@ -4,6 +4,7 @@ import JWTService from "../service/jwt.js";
 import type { GraphqlContext } from "../interfaces.js";
 import type { User } from "@prisma/client";
 import UserService from "../service/UserService.js";
+import { redisClient } from "../clients/db/redis/index.js";
 
 
 const mutations={
@@ -11,6 +12,7 @@ const mutations={
          if(!ctx.user || !ctx.user.id) throw new Error("Unauthorized User")
 
         await UserService.followUser(ctx.user.id,to);
+        await redisClient.del(`recommended_users:user:${ctx.user.id}`);
 
         return true;
     },
@@ -19,7 +21,7 @@ const mutations={
          if(!ctx.user || !ctx.user.id) throw new Error("Unauthorized User")
 
         await UserService.UnfollowUser(ctx.user.id,to);
-
+        await redisClient.del(`recommended_users:user:${ctx.user.id}`);
 
         return true;
     }
@@ -84,7 +86,17 @@ const extraaResolver={
     },
 
     recommendedUsers:async (parent:User,_:any,ctx:GraphqlContext)=>{
-       if(!ctx.user?.id)return;
+       if(!ctx.user?.id)return [];
+
+        const cacheKey  =`recommended_users:user:${ctx.user.id}`;
+
+        const cachedValue =await redisClient.get(cacheKey);
+
+        if(cachedValue){
+            return JSON.parse(cachedValue);
+        }
+
+        //We can implement locking here To avoid the cache stampede problem 
 
        const myfollowings =await prisma.follows.findMany({where:{follower:{id:ctx?.user?.id}},
         include:{
@@ -109,6 +121,10 @@ const extraaResolver={
             }
         }
        }
+       // we will expire cache after 7 days so that if there are new recommendation after 7 days
+
+       // In future we use versioning as well to avoid the latecy of invalidations
+       await redisClient.set(cacheKey,JSON.stringify(user),"EX",604800);
 
    
 
